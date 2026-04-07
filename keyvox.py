@@ -75,7 +75,7 @@ def request_lock_status(
         httpx.Response from the API
     """
     method = "POST"
-    path = "/api/eagle-pms/v1/getLockStatus"
+    path = "/v1/getLockStatus"
     url = f"{(base_url if base_url is not None else KEYVOX_BASE_URL)}{path}"
 
     body_str = json.dumps({"lockId": lock_id})

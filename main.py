@@ -65,13 +65,13 @@ async def health_check():
     return {"status": "ok", "service": "replit-proxy"}
 
 
-@app.api_route("/proxy/eagle-pms{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+@app.api_route("/api/eagle-pms/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 async def proxy_eagle_pms(path: str, request: Request) -> Response:
     """
     Proxy endpoint that forwards all requests to
     https://eco.blockchainlock.io/api/eagle-pms
 
-    Replit apps should call: GET/POST /proxy/eagle-pms?...
+    Replit apps should call: GET/POST /api/eagle-pms?...
     This will forward to:    GET/POST https://eco.blockchainlock.io/api/eagle-pms?...
     """
     # Build target URL
