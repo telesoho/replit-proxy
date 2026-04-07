@@ -9,7 +9,7 @@ import hashlib
 import hmac
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -80,7 +80,7 @@ def request_lock_status(
 
     body_str = json.dumps({"lockId": lock_id})
     digest = _make_digest(body_str)
-    date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+    date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
     signing_string = _build_signing_string(method, path, digest, date)
     signature = _make_signature(signing_string, secret_key)
     authorization = _build_authorization(api_key, signature)

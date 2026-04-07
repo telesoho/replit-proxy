@@ -16,7 +16,7 @@ Run:
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -39,12 +39,12 @@ app = FastAPI(title="Replit Proxy", description="Central proxy for Replit apps t
 @app.middleware
 async def log_requests(request: Request, call_next):
     """Log every request that passes through the proxy."""
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
 
     response = await call_next(request)
 
-    duration = (datetime.utcnow() - start_time).total_seconds()
+    duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
     # Log in structured format
     logger.info(
