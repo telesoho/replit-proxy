@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\telesoho\\\\prjs\\\\sdl\\\\replit\\\\replit-proxy\")"
+    ]
+  }
+}
