@@ -10,8 +10,15 @@ import hmac
 import json
 import os
 from datetime import datetime
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 import httpx
+
+# Load .env from project root (one level up from this file)
+_dotenv_path = Path(__file__).parent / ".env"
+load_dotenv(_dotenv_path)
 
 KEYVOX_BASE_URL = os.environ.get("KEYVOX_BASE_URL", "https://eco.blockchainlock.io")
 

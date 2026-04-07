@@ -1,0 +1,22 @@
+[Unit]
+Description=Replit Proxy Service
+After=network.target
+
+[Service]
+Type=simple
+User=%u
+WorkingDirectory=%h/prjs/sdl/replit/replit-proxy
+ExecStart=/home/%u/.local/bin/uv run uvicorn main:app --host 0.0.0.0 --port 8080
+Restart=on-failure
+RestartSec=5s
+
+# Environment variables (uncomment and set as needed)
+# Environment="KEYVOX_BASE_URL=https://eco.blockchainlock.io"
+# Environment="KEYVOX_API_KEY=your_api_key"
+# Environment="KEYVOX_SECRET_KEY=your_secret_key"
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
