@@ -46,6 +46,7 @@ if $SYSTEM_WIDE; then
     sed \
         -e "s|%u|$USERNAME|g" \
         -e "s|%h|$HOME|g" \
+        -e "s|^WorkingDirectory=.*|WorkingDirectory=$PROJECT_DIR|" \
         -e "s|^ExecStart=.*|ExecStart=$UV_BIN run uvicorn main:app --host 0.0.0.0 --port 8080|" \
         -e "s|^WantedBy=.*|WantedBy=multi-user.target|" \
         "$UNIT_SRC" > "$TMP_UNIT"
@@ -53,6 +54,7 @@ else
     sed \
         -e "s|%u|$USERNAME|g" \
         -e "s|%h|$HOME|g" \
+        -e "s|^WorkingDirectory=.*|WorkingDirectory=$PROJECT_DIR|" \
         -e "s|^ExecStart=.*|ExecStart=$UV_BIN run uvicorn main:app --host 0.0.0.0 --port 8080|" \
         -e "/^User=/d" \
         -e "s|^WantedBy=.*|WantedBy=default.target|" \
