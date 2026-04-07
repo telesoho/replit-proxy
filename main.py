@@ -9,7 +9,7 @@ Usage in Replit App:
   # requests.get("https://eco.blockchainlock.io/api/eagle-pms?...")
 
   # Call through the proxy instead:
-  # requests.get("https://your-proxy-server.com/proxy/eagle-pms?...")
+  # requests.get("https://your-proxy-server.com/api/eagle-pms?...")
 
 Run:
   uvicorn main:app --host 0.0.0.0 --port 8080
