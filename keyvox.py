@@ -8,9 +8,12 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 from datetime import datetime
 
 import httpx
+
+KEYVOX_BASE_URL = os.environ.get("KEYVOX_BASE_URL", "https://eco.blockchainlock.io")
 
 
 def _make_digest(body_str: str) -> str:
@@ -49,7 +52,7 @@ def request_lock_status(
     secret_key: str,
     lock_id: str,
     target_host: str = "default.pms",
-    base_url: str = "https://eco.blockchainlock.io",
+    base_url: str | None = None,
 ) -> httpx.Response:
     """
     Call POST /v1/getLockStatus with HMAC-SHA256 authentication.
@@ -66,7 +69,7 @@ def request_lock_status(
     """
     method = "POST"
     path = "/api/eagle-pms/v1/getLockStatus"
-    url = f"{base_url}{path}"
+    url = f"{(base_url if base_url is not None else KEYVOX_BASE_URL)}{path}"
 
     body_str = json.dumps({"lockId": lock_id})
     digest = _make_digest(body_str)
@@ -87,8 +90,6 @@ def request_lock_status(
 
 
 if __name__ == "__main__":
-    import os
-
     api_key = os.environ.get("KEYVOX_API_KEY", "")
     secret_key = os.environ.get("KEYVOX_SECRET_KEY", "")
 
