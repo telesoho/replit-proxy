@@ -39,10 +39,25 @@ else
     echo "[MODE] User-level"
 fi
 
-# Sub %u with actual username
+# Build unit file based on install mode
 USERNAME=$(whoami)
 TMP_UNIT="/tmp/${SERVICE_NAME}.service"
-sed "s|%u|$USERNAME|g; s|%h|$HOME|g" "$UNIT_SRC" > "$TMP_UNIT"
+if $SYSTEM_WIDE; then
+    sed \
+        -e "s|%u|$USERNAME|g" \
+        -e "s|%h|$HOME|g" \
+        -e "s|^ExecStart=.*|ExecStart=$UV_BIN run uvicorn main:app --host 0.0.0.0 --port 8080|" \
+        -e "s|^WantedBy=.*|WantedBy=multi-user.target|" \
+        "$UNIT_SRC" > "$TMP_UNIT"
+else
+    sed \
+        -e "s|%u|$USERNAME|g" \
+        -e "s|%h|$HOME|g" \
+        -e "s|^ExecStart=.*|ExecStart=$UV_BIN run uvicorn main:app --host 0.0.0.0 --port 8080|" \
+        -e "/^User=/d" \
+        -e "s|^WantedBy=.*|WantedBy=default.target|" \
+        "$UNIT_SRC" > "$TMP_UNIT"
+fi
 
 # Copy unit file
 $SUDO cp "$TMP_UNIT" "$SYSTEMD_USER_DIR/${SERVICE_NAME}.service"
