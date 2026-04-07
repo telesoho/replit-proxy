@@ -23,12 +23,12 @@ import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
-from config import TARGET_BASE_URL, TARGET_EAGLE_PMS_PATH
+from config import TARGET_BASE_URL, TARGET_EAGLE_PMS_PATH, UPSTREAM_TIMEOUT_SECONDS
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(client_ip)s | %(method)s %(path)s | %(status)d | %(duration)ds",
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("replit-proxy")
@@ -85,9 +85,19 @@ async def proxy_eagle_pms(path: str, request: Request) -> Response:
     # Read request body if present
     body = await request.body()
 
-    # Collect headers to forward (optionally filter sensitive ones)
+    # Collect headers to forward (filter hop-by-hop / proxy-managed headers)
     headers = dict(request.headers)
-    hop_by_hop_headers = {"host", "connection", "transfer-encoding", "keep-alive"}
+    hop_by_hop_headers = {
+        "host",
+        "connection",
+        "transfer-encoding",
+        "keep-alive",
+        "proxy-connection",
+        "upgrade",
+        "te",
+        "trailer",
+        "content-length",
+    }
     headers = {k: v for k, v in headers.items() if k.lower() not in hop_by_hop_headers}
 
     logger.info(
@@ -98,7 +108,7 @@ async def proxy_eagle_pms(path: str, request: Request) -> Response:
     )
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(UPSTREAM_TIMEOUT_SECONDS)) as client:
             response = await client.request(
                 method=request.method,
                 url=target_url,
@@ -108,15 +118,33 @@ async def proxy_eagle_pms(path: str, request: Request) -> Response:
                 follow_redirects=True,
             )
 
+        # Do not forward response transport headers as-is; Starlette will manage them.
+        filtered_response_headers = {
+            k: v
+            for k, v in response.headers.items()
+            if k.lower()
+            not in {
+                "content-length",
+                "transfer-encoding",
+                "connection",
+                "keep-alive",
+                "proxy-connection",
+                "upgrade",
+                "te",
+                "trailer",
+                "content-encoding",
+            }
+        }
+
         return Response(
             content=response.content,
             status_code=response.status_code,
-            headers=dict(response.headers),
+            headers=filtered_response_headers,
             media_type=response.headers.get("content-type"),
         )
 
     except httpx.TimeoutException:
-        logger.error("Timeout calling %s", target_url)
+        logger.error("Timeout calling %s (timeout=%ss)", target_url, UPSTREAM_TIMEOUT_SECONDS)
         return JSONResponse(
             status_code=504,
             content={"error": "Upstream request timed out"},
