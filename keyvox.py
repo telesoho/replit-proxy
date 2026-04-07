@@ -21,6 +21,7 @@ _dotenv_path = Path(__file__).parent / ".env"
 load_dotenv(_dotenv_path)
 
 KEYVOX_BASE_URL = os.environ.get("KEYVOX_BASE_URL", "https://eco.blockchainlock.io")
+KEYVOX_TIMEOUT_SECONDS = float(os.environ.get("KEYVOX_TIMEOUT_SECONDS", "65"))
 
 
 def _make_digest(body_str: str) -> str:
@@ -60,6 +61,7 @@ def request_lock_status(
     lock_id: str,
     target_host: str = "default.pms",
     base_url: str | None = None,
+    timeout_seconds: float | None = None,
 ) -> httpx.Response:
     """
     Call POST /v1/getLockStatus with HMAC-SHA256 authentication.
@@ -70,13 +72,15 @@ def request_lock_status(
         lock_id:       Lock ID to query
         target_host:   x-target-host header value
         base_url:      API base URL
+        timeout_seconds: Request timeout in seconds
 
     Returns:
         httpx.Response from the API
     """
     method = "POST"
     path = "/api/eagle-pms/v1/getLockStatus"
-    url = f"{(base_url if base_url is not None else KEYVOX_BASE_URL)}{path}"
+    final_base_url = (base_url if base_url is not None else KEYVOX_BASE_URL).rstrip("/")
+    url = f"{final_base_url}{path}"
 
     body_str = json.dumps({"lockId": lock_id})
     digest = _make_digest(body_str)
@@ -93,7 +97,8 @@ def request_lock_status(
         "authorization": authorization,
     }
 
-    return httpx.post(url, headers=headers, content=body_str)
+    final_timeout = timeout_seconds if timeout_seconds is not None else KEYVOX_TIMEOUT_SECONDS
+    return httpx.post(url, headers=headers, content=body_str, timeout=httpx.Timeout(final_timeout))
 
 
 if __name__ == "__main__":
@@ -103,6 +108,8 @@ if __name__ == "__main__":
     if not api_key or not secret_key:
         print("Set KEYVOX_API_KEY and KEYVOX_SECRET_KEY environment variables.")
     else:
+        print(f"KEYVOX_BASE_URL={KEYVOX_BASE_URL}")
+        print(f"KEYVOX_TIMEOUT_SECONDS={KEYVOX_TIMEOUT_SECONDS}")
         resp = request_lock_status(api_key, secret_key, lock_id="QROBZW5OSX2J9QMQ")
         print(f"Status: {resp.status_code}")
         print(f"Body: {resp.text}")
