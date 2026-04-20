@@ -140,8 +140,16 @@ async def proxy_eagle_pms(path: str, request: Request) -> Response:
         target_url,
     )
 
+    client = http_client
+    if client is None:
+        logger.error("HTTP client is not initialized")
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Service unavailable: HTTP client is not initialized"},
+        )
+
     try:
-        response = await http_client.request(
+        response = await client.request(
             method=request.method,
             url=target_url,
             params=query_params,
