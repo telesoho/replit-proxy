@@ -16,14 +16,21 @@ Run:
 """
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any
 
 import httpx
+import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
-from config import TARGET_BASE_URL, TARGET_EAGLE_PMS_PATH, UPSTREAM_TIMEOUT_SECONDS
+from config import (
+    PROXY_HOST,
+    PROXY_PORT,
+    TARGET_BASE_URL,
+    TARGET_EAGLE_PMS_PATH,
+    UPSTREAM_TIMEOUT_SECONDS,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -33,7 +40,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger("replit-proxy")
 
-app = FastAPI(title="Replit Proxy", description="Central proxy for Replit apps to access external APIs")
+# Application-level HTTP client (singleton) — created on startup, closed on shutdown.
+# This avoids creating/destroying an AsyncClient per request, which causes memory leaks
+# and file-descriptor exhaustion under sustained load.
+http_client: httpx.AsyncClient | None = None
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    global http_client
+    http_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(UPSTREAM_TIMEOUT_SECONDS),
+        limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+    )
+    logger.info("HTTP client started (max_connections=100, max_keepalive=20)")
+    try:
+        yield
+    finally:
+        if http_client:
+            await http_client.aclose()
+            logger.info("HTTP client closed")
+
+
+app = FastAPI(
+    title="Replit Proxy",
+    description="Central proxy for Replit apps to access external APIs",
+    lifespan=lifespan,
+)
 
 
 @app.middleware
@@ -108,15 +141,14 @@ async def proxy_eagle_pms(path: str, request: Request) -> Response:
     )
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(UPSTREAM_TIMEOUT_SECONDS)) as client:
-            response = await client.request(
-                method=request.method,
-                url=target_url,
-                params=query_params,
-                headers=headers,
-                content=body if body else None,
-                follow_redirects=True,
-            )
+        response = await http_client.request(
+            method=request.method,
+            url=target_url,
+            params=query_params,
+            headers=headers,
+            content=body if body else None,
+            follow_redirects=True,
+        )
 
         # Do not forward response transport headers as-is; Starlette will manage them.
         filtered_response_headers = {
@@ -158,7 +190,4 @@ async def proxy_eagle_pms(path: str, request: Request) -> Response:
 
 
 if __name__ == "__main__":
-    import uvicorn
-    from config import PROXY_HOST, PROXY_PORT
-
     uvicorn.run(app, host=PROXY_HOST, port=PROXY_PORT)
