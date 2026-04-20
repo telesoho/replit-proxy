@@ -28,10 +28,13 @@ echo "uv found: $UV_BIN"
 echo "Project: $PROJECT_DIR"
 
 # Determine user
+# In system-wide mode, prefer SUDO_USER (the original invoking user) over
+# whoami (which would return "root" when running under sudo).
 if $SYSTEM_WIDE; then
     SYSTEMD_USER_DIR="/etc/systemd/system"
     SUDO="sudo"
-    echo "[MODE] System-wide (root)"
+    USERNAME="${SUDO_USER:-$(whoami)}"
+    echo "[MODE] System-wide (user=$USERNAME)"
 else
     SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
     SUDO=""
@@ -40,7 +43,6 @@ else
 fi
 
 # Build unit file based on install mode
-USERNAME=$(whoami)
 TMP_UNIT="/tmp/${SERVICE_NAME}.service"
 if $SYSTEM_WIDE; then
     sed \
