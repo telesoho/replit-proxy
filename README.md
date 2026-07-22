@@ -1,45 +1,45 @@
 # Replit Proxy
 
-Replit Proxy 是一个基于 FastAPI 的中转服务，用于把 Replit 应用访问外部接口的流量统一收口到代理层，便于集中日志记录和统一控制。
+Replit Proxy は FastAPI ベースのプロキシサービスです。Replit アプリから外部 API へアクセスするトラフィックをプロキシ層に集約し、ログの集中管理と統一的な制御を可能にします。
 
-## 功能概览
+## 機能概要
 
-- 统一代理 `api/eagle-pms` 相关请求
-- 提供健康检查接口 `GET /health`
-- 记录请求日志（来源 IP、方法、路径、状态码、耗时）
-- 使用应用级 `httpx.AsyncClient`，支持连接复用与超时控制
+- `api/eagle-pms` 関連リクエストの統一プロキシ
+- ヘルスチェックエンドポイント `GET /health`
+- リクエストログの記録（送信元 IP、メソッド、パス、ステータスコード、処理時間）
+- アプリケーションレベルの `httpx.AsyncClient` による接続再利用とタイムアウト制御
 
-## 环境要求
+## 動作環境
 
 - Python 3.10+
 - [uv](https://github.com/astral-sh/uv)
-- （可选）Windows 服务安装需要 [NSSM](https://nssm.cc/download)
-- （可选）Linux 服务安装需要 `systemd`
+- （任意）Windows サービスとしてインストールする場合は [NSSM](https://nssm.cc/download)
+- （任意）Linux サービスとしてインストールする場合は `systemd`
 
-## 安装教程
+## インストール手順
 
-### 1) 克隆并进入项目
+### 1) リポジトリのクローンと移動
 
 ```bash
 git clone <your-repo-url>
 cd replit-proxy
 ```
 
-### 2) 安装依赖
+### 2) 依存関係のインストール
 
 ```bash
 uv sync
 ```
 
-### 3) 启动服务
+### 3) サービスの起動
 
-#### 通用方式（推荐）
+#### 共通方法（推奨）
 
 ```bash
 uv run uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 
-#### 脚本方式
+#### スクリプトによる起動
 
 - Linux/macOS:
   ```bash
@@ -50,107 +50,106 @@ uv run uvicorn main:app --host 0.0.0.0 --port 8080
   scripts\run.bat
   ```
 
-### 4) 验证是否启动成功
+### 4) 起動確認
 
 ```bash
 curl http://127.0.0.1:8080/health
 ```
 
-返回示例：
+レスポンス例:
 
 ```json
 {"status":"ok","service":"replit-proxy"}
 ```
 
-## 卸载教程
+## アンインストール手順
 
-按你的部署方式选择对应卸载步骤。
+デプロイ方法に応じて、該当する手順を選択してください。
 
-### A. 仅本地运行（未安装系统服务）
+### A. ローカル実行のみ（システムサービス未インストール）
 
-1. 停止当前运行进程（在终端中 `Ctrl + C`）
-2. （可选）清理虚拟环境和缓存：
+1. 実行中のプロセスを停止（ターミナルで `Ctrl + C`）
+2. （任意）仮想環境とキャッシュを削除:
 
 ```bash
 rm -rf .venv .ruff_cache
 ```
 
-Windows 可手动删除对应目录。
+Windows では該当ディレクトリを手動で削除してください。
 
-### B. Linux/macOS（systemd 服务）卸载
+### B. Linux/macOS（systemd サービス）のアンインストール
 
-#### 用户级服务（默认）
+#### ユーザーレベルサービス（デフォルト）
 
 ```bash
 ./scripts/remove-service.sh
 ```
 
-#### 系统级服务（使用 `--system` 安装过）
+#### システムレベルサービス（`--system` でインストールした場合）
 
 ```bash
 ./scripts/remove-service.sh --system
 ```
 
-如果你还未安装但需要先安装服务，可用：
+未インストールで先にサービスをセットアップする場合:
 
 ```bash
 ./scripts/install-service.sh
-# 或
+# または
 ./scripts/install-service.sh --system
 ```
 
-### C. Windows（NSSM 服务）卸载
+### C. Windows（NSSM サービス）のアンインストール
 
 ```bat
 scripts\remove-service.bat
 ```
 
-如果你还未安装但需要先安装服务，可用：
+未インストールで先にサービスをセットアップする場合:
 
 ```bat
 scripts\install-service.bat
 ```
 
-## 文件结构说明
+## ファイル構成
 
 ```text
 replit-proxy/
-├─ main.py                     # FastAPI 入口，代理路由与日志中间件
-├─ config.py                   # 服务配置（端口、上游地址、超时等）
-├─ keyvox.py                   # KeyVox/eagle-pms HMAC 签名调用示例客户端
-├─ pyproject.toml              # 项目元数据与依赖定义
-├─ uv.lock                     # 依赖锁文件
+├─ main.py                     # FastAPI エントリポイント、プロキシルートとログミドルウェア
+├─ config.py                   # サービス設定（ポート、上流 URL、タイムアウトなど）
+├─ keyvox.py                   # KeyVox/eagle-pms HMAC 署名呼び出しのサンプルクライアント
+├─ pyproject.toml              # プロジェクトメタデータと依存関係定義
+├─ uv.lock                     # 依存関係ロックファイル
 ├─ scripts/
-│  ├─ run.sh                   # Linux/macOS 启动脚本
-│  ├─ run.bat                  # Windows 启动脚本
-│  ├─ install-service.sh       # Linux/macOS systemd 服务安装脚本
-│  ├─ remove-service.sh        # Linux/macOS systemd 服务卸载脚本
-│  ├─ install-service.bat      # Windows NSSM 服务安装脚本
-│  ├─ remove-service.bat       # Windows NSSM 服务卸载脚本
-│  ├─ replit-proxy.service     # systemd 单元模板
-│  └─ service.bat              # Windows 服务辅助脚本
-├─ .gitignore                  # Git 忽略规则
-└─ README.md                   # 项目说明文档
+│  ├─ run.sh                   # Linux/macOS 起動スクリプト
+│  ├─ run.bat                  # Windows 起動スクリプト
+│  ├─ install-service.sh       # Linux/macOS systemd サービスインストールスクリプト
+│  ├─ remove-service.sh        # Linux/macOS systemd サービスアンインストールスクリプト
+│  ├─ install-service.bat      # Windows NSSM サービスインストールスクリプト
+│  ├─ remove-service.bat       # Windows NSSM サービスアンインストールスクリプト
+│  ├─ replit-proxy.service     # systemd ユニットテンプレート
+│  └─ service.bat              # Windows サービス補助スクリプト
+├─ .gitignore                  # Git 除外ルール
+└─ README.md                   # プロジェクト説明ドキュメント
 ```
 
-## 常用开发命令
+## よく使う開発コマンド
 
 ```bash
-# 启动（开发模式，自动重载）
+# 起動（開発モード、自動リロード）
 uv run uvicorn main:app --host 0.0.0.0 --port 8080 --reload
 
-# 运行测试
+# テスト実行
 uv run pytest
 
-# 代码检查与格式化
+# コードチェックとフォーマット
 uv run ruff check .
 uv run ruff format .
 ```
 
-## 代理接口示例
+## プロキシ API の例
 
-- Replit 应用请求代理地址：
+- Replit アプリからのプロキシリクエスト先:
   `http://<proxy-host>:8080/api/eagle-pms/...`
-- 服务会转发到上游：
+- サービスが転送する上流先:
   `https://eco.blockchainlock.io/api/eagle-pms/...`
-
